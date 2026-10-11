@@ -43,7 +43,7 @@ Checked on Claude Code 2.1.296 against code.claude.com docs (sub-agents, model-c
 - U2: Merge semantics of `hooks` and `env` across user/project settings.
 - U3: Whether `enabledPlugins` in `~/.claude/settings.json` auto-installs plugins on a fresh machine (install script uses the CLI regardless).
 - U4: Bash hooks on Windows (assumed to require Git Bash).
-- U5: How `claude plugin eval` works and whether it fits the smoke tests.
+- U5 (resolved): `claude plugin eval` runs `evals/**/case.yaml` (or prompt.md + graders/*.md) cases against a plugin with a no-plugin ablation arm and scored graders. Decision: keep S1-S3 as the bash smoke script for phase 1 because they assert on workspace files in a sandbox repo, which prompt graders do not cover as directly; revisit an eval suite for triage-quality regressions later.
 
 ## 3. Architecture
 
