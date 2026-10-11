@@ -39,7 +39,7 @@ Checked on Claude Code 2.1.296 against code.claude.com docs (sub-agents, model-c
 | superpowers `writing-plans` (6.4.1) requires full code in every code step ("No Placeholders") | read `SKILL.md` |
 
 **Unverified — must be tested during implementation:**
-- U1: Whether project `enabledPlugins: {"podium@…": false}` disables a user-enabled plugin.
+- U1 (verified 2026-10-11, claude CLI on macOS): a project `.claude/settings.json` with `enabledPlugins: {"podium@claude-setup": false}` DOES override a user-scope enabled plugin. A headless session in that project listed no `podium:` subagents (NONE); a plain directory listed all four. `claude plugin list --json` from inside the project reports podium as `enabled: false`, `projectEnabled: false`. The `permissions.deny` fallback was not needed.
 - U2: Merge semantics of `hooks` and `env` across user/project settings.
 - U3: Whether `enabledPlugins` in `~/.claude/settings.json` auto-installs plugins on a fresh machine (install script uses the CLI regardless).
 - U4: Bash hooks on Windows (assumed to require Git Bash).
@@ -86,7 +86,7 @@ The critic is always a **new instance** with no planner history, so it does not 
 - Every slot is optional; an unbound slot uses the Podium default.
 - `workspace`: `null` → `~/.agent-work`; a string → that path (relative paths resolve from repo root).
 - `fallbackModel`: `null` → no silent fallback; a model ID → used only when the pinned model is unavailable, and the conductor reports it.
-- A project that wants Podium fully off sets `"podium@<marketplace>": false` in `.claude/settings.json` (subject to U1), or denies `Agent(podium:*)`.
+- A project that wants Podium fully off sets `"podium@<marketplace>": false` in `.claude/settings.json` (U1 verified), or denies `Agent(podium:*)`.
 
 ## 4. Triage
 
