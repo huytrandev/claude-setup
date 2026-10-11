@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "slots": {
+    "planner": "agora-ta",
+    "scout": "user-helper"
+  },
+  "workspace": null
+}
