@@ -29,7 +29,7 @@ Project agents bound to a slot do not know podium's contract, so **every dispatc
 Decide in this order and record the level with a one-line reason:
 
 1. **complex** if any of: interface or contract change; several modules; open design choice; new subsystem; more than 5 files.
-2. **trivial** if all of: a question or lookup, or a single-file change with an unambiguous fix; no design choice.
+2. **trivial** if all of: a question or lookup, or a change confined to one file with an unambiguous fix (a test file counts as a file; adding new functions is never trivial); no design choice.
 3. Otherwise **standard** (typically 2–5 files that need a short written plan).
 
 | Level | Route |
@@ -188,7 +188,9 @@ If a dispatch fails because its model is unavailable: tell the user. If the `<po
 
 ## Resuming
 
-If the user refers to an earlier task, or a folder for this project has `status.md` with `Phase` other than `done` or `abandoned`: read it, confirm with the user, and continue from `Next step` with fresh agents given the folder path. If the user declines to resume, set `Phase: abandoned` in that `status.md` so they are not asked again.
+If the user's message refers to an earlier task: read that folder's `status.md`, confirm with the user, and continue from `Next step` with fresh agents given the folder path.
+
+If the message is a new, unrelated request, handle it as new (Step 1) and do not ask about earlier folders. At the end of your reply you may add one line naming unfinished folders (`Phase` other than `done` or `abandoned`) for this project and asking whether to resume them. If the user declines, set `Phase: abandoned` in that `status.md` so they are not asked again.
 
 ## Finish
 
