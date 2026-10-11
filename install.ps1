@@ -1,7 +1,9 @@
+#Requires -Version 7.0
 # Installs this repo's Claude Code setup into ~/.claude on Windows (copies, no symlinks). Safe to re-run.
 param([string]$HomeDir = $(if ($env:USERPROFILE) { $env:USERPROFILE } else { $HOME }))
 $ErrorActionPreference = 'Stop'
 if (-not $HomeDir) { Write-Output 'Home directory could not be determined; pass -HomeDir <path>.'; exit 1 }
+$HomeDir = [IO.Path]::GetFullPath($HomeDir)
 $Repo = $PSScriptRoot
 $Claude = Join-Path $HomeDir '.claude'
 $Backup = Join-Path $Claude ("backups/claude-setup-" + (Get-Date -Format 'yyyyMMdd-HHmmss'))
@@ -15,24 +17,24 @@ function Write-Status([string]$State, [string]$What) {
 }
 
 function Test-SameContent([string]$A, [string]$B) {
-  if (-not (Test-Path $B)) { return $false }
-  if ((Get-Item $A).PSIsContainer) {
-    if (-not (Get-Item $B).PSIsContainer) { return $false }
+  if (-not (Test-Path -LiteralPath $B)) { return $false }
+  if ((Get-Item -LiteralPath $A).PSIsContainer) {
+    if (-not (Get-Item -LiteralPath $B).PSIsContainer) { return $false }
     $hashes = {
       param($Root)
-      (Get-ChildItem $Root -Recurse -File | ForEach-Object { $_.FullName.Substring($Root.Length) + ':' + (Get-FileHash $_.FullName).Hash } | Sort-Object) -join "`n"
+      (Get-ChildItem -LiteralPath $Root -Recurse -File | ForEach-Object { $_.FullName.Substring($Root.Length) + ':' + (Get-FileHash -LiteralPath $_.FullName).Hash } | Sort-Object) -join "`n"
     }
     return (& $hashes $A) -ceq (& $hashes $B)
   }
-  if ((Get-Item $B).PSIsContainer) { return $false }
-  return (Get-FileHash $A).Hash -eq (Get-FileHash $B).Hash
+  if ((Get-Item -LiteralPath $B).PSIsContainer) { return $false }
+  return (Get-FileHash -LiteralPath $A).Hash -eq (Get-FileHash -LiteralPath $B).Hash
 }
 
 function Move-ToBackup([string]$Dest, [string]$Rel) {
-  if (-not (Test-Path $Dest)) { return }
+  if (-not (Test-Path -LiteralPath $Dest)) { return }
   $bak = Join-Path $Backup $Rel
   New-Item -ItemType Directory -Force -Path (Split-Path $bak) | Out-Null
-  Move-Item $Dest $bak
+  Move-Item -LiteralPath $Dest -Destination $bak
 }
 
 function Copy-Item-Backed([string]$Rel) {
@@ -41,7 +43,7 @@ function Copy-Item-Backed([string]$Rel) {
   if (Test-SameContent $src $dest) { Write-Status ok $dest; return }
   Move-ToBackup $dest $Rel
   New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
-  Copy-Item $src $dest -Recurse
+  Copy-Item -LiteralPath $src -Destination $dest -Recurse
   Write-Status changed $dest
 }
 
@@ -64,17 +66,18 @@ function Get-CanonicalJson($Value) { ConvertTo-Json (ConvertTo-Sorted $Value) -D
 function Install-Settings {
   $src = Join-Path $Repo 'dotfiles/settings.json'
   $dest = Join-Path $Claude 'settings.json'
-  if (-not (Test-Path $dest -PathType Leaf)) { Copy-Item-Backed 'settings.json'; return }
+  if (-not (Test-Path -LiteralPath $dest -PathType Leaf)) { Copy-Item-Backed 'settings.json'; return }
   try {
-    $new = Get-Content $src -Raw | ConvertFrom-Json
-    $old = Get-Content $dest -Raw | ConvertFrom-Json
+    $new = Get-Content -LiteralPath $src -Raw -Encoding utf8 | ConvertFrom-Json
+    $old = Get-Content -LiteralPath $dest -Raw -Encoding utf8 | ConvertFrom-Json
   } catch { Copy-Item-Backed 'settings.json'; return }
   if ($old.PSObject.Properties['extraKnownMarketplaces']) {
     $new | Add-Member -NotePropertyName extraKnownMarketplaces -NotePropertyValue $old.extraKnownMarketplaces -Force
   }
   if ((Get-CanonicalJson $new) -ceq (Get-CanonicalJson $old)) { Write-Status ok $dest; return }
   Move-ToBackup $dest 'settings.json'
-  $new | ConvertTo-Json -Depth 20 | Set-Content -Path $dest -Encoding utf8
+  $json = $new | ConvertTo-Json -Depth 20
+  [IO.File]::WriteAllText($dest, $json + "`n", [Text.UTF8Encoding]::new($false))
   Write-Status changed $dest
 }
 
@@ -94,27 +97,43 @@ Install-Settings
 
 Write-Output '== Workspace'
 $ws = Join-Path $HomeDir '.agent-work'
-if (Test-Path $ws) { Write-Status ok $ws } else { New-Item -ItemType Directory -Path $ws | Out-Null; Write-Status changed $ws }
+if (Test-Path -LiteralPath $ws) { Write-Status ok $ws } else { New-Item -ItemType Directory -Path $ws | Out-Null; Write-Status changed $ws }
+
+# Runs a claude list command; returns its output, or $null (and counts a failure) if it cannot run.
+function Get-ClaudeList([string]$Label, [string[]]$CliArgs) {
+  try {
+    $out = & claude @CliArgs 2>$null | Out-String
+    if ($LASTEXITCODE -eq 0) { return $out }
+  } catch { }
+  Write-Status failed $Label
+  return $null
+}
 
 if ($claudeOk) {
   Write-Output '== Plugins'
-  $markets = (& claude plugin marketplace list 2>$null | Out-String)
-  foreach ($m in @(@('claude-setup', $Repo), @('claude-plugins-official', 'anthropics/claude-plugins-official'))) {
-    if ($markets.Contains($m[0])) { Write-Status ok "marketplace $($m[0])"; continue }
-    & claude plugin marketplace add $m[1]
-    if ($LASTEXITCODE -eq 0) { Write-Status changed "marketplace $($m[0])" } else { Write-Status failed "marketplace $($m[0])" }
+  $markets = Get-ClaudeList 'marketplace list' @('plugin', 'marketplace', 'list')
+  if ($null -ne $markets) {
+    foreach ($m in @(@('claude-setup', $Repo), @('claude-plugins-official', 'anthropics/claude-plugins-official'))) {
+      if ($markets.Contains($m[0])) { Write-Status ok "marketplace $($m[0])"; continue }
+      $ok = $false
+      try { & claude plugin marketplace add $m[1]; $ok = ($LASTEXITCODE -eq 0) } catch { }
+      if ($ok) { Write-Status changed "marketplace $($m[0])" } else { Write-Status failed "marketplace $($m[0])" }
+    }
   }
-  $installed = (& claude plugin list 2>$null | Out-String)
-  $settings = Get-Content (Join-Path $Repo 'dotfiles/settings.json') -Raw | ConvertFrom-Json
-  foreach ($p in $settings.enabledPlugins.PSObject.Properties) {
-    if (-not $p.Value) { continue }
-    if ($installed.Contains($p.Name)) { Write-Status ok "plugin $($p.Name)"; continue }
-    & claude plugin install $p.Name
-    if ($LASTEXITCODE -eq 0) { Write-Status changed "plugin $($p.Name)" } else { Write-Status failed "plugin $($p.Name)" }
+  $installed = Get-ClaudeList 'plugin list' @('plugin', 'list')
+  if ($null -ne $installed) {
+    $settings = Get-Content -LiteralPath (Join-Path $Repo 'dotfiles/settings.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    foreach ($p in $settings.enabledPlugins.PSObject.Properties) {
+      if (-not $p.Value) { continue }
+      if ($installed.Contains($p.Name)) { Write-Status ok "plugin $($p.Name)"; continue }
+      $ok = $false
+      try { & claude plugin install $p.Name; $ok = ($LASTEXITCODE -eq 0) } catch { }
+      if ($ok) { Write-Status changed "plugin $($p.Name)" } else { Write-Status failed "plugin $($p.Name)" }
+    }
   }
 }
 
-if (Test-Path $Backup) { Write-Output "Backups: $Backup" }
+if (Test-Path -LiteralPath $Backup) { Write-Output "Backups: $Backup" }
 Write-Output "Summary: $script:Changed changed"
 if ($script:Failed -gt 0) { Write-Output "Failures: $script:Failed" }
 if (-not $claudeOk -or $script:Failed -gt 0) { exit 1 }

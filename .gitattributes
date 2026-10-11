@@ -1,0 +1,7 @@
+*.sh text eol=lf
+*.ps1 text eol=lf
+*.cmd text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+plugins/podium/hooks/session-start text eol=lf
+tests/install/stub-claude text eol=lf
