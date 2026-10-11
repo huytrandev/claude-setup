@@ -10,5 +10,6 @@ assert_eq "planner,critic,builder,scout" "$(jq -r '.properties.slots.properties 
 assert_eq "false" "$(jq -r '.properties.slots.additionalProperties' "$S")" "no unknown slots"
 assert_eq "1" "$(jq -r '.properties.version.const' "$S")" "version const"
 assert_eq "string,null" "$(jq -r '.properties.workspace.type | join(",")' "$S")" "workspace type"
+assert_eq "sonnet,opus,haiku,fable,null" "$(jq -r '.properties.fallbackModel.enum | map(tostring) | join(",")' "$S")" "fallbackModel aliases"
 
 finish
