@@ -56,11 +56,11 @@ cs_check_deps() {
 }
 
 cs_ensure_marketplace() {
-  if claude plugin marketplace list 2>/dev/null | grep -q -F "$1"; then echo "ok marketplace $1"; return 0; fi
-  claude plugin marketplace add "$2" && echo "changed marketplace $1"
+  if claude plugin marketplace list 2>/dev/null </dev/null | grep -q -F "$1"; then echo "ok marketplace $1"; return 0; fi
+  if claude plugin marketplace add "$2" </dev/null; then echo "changed marketplace $1"; else echo "failed marketplace $1"; return 1; fi
 }
 
 cs_ensure_plugin() {
-  if claude plugin list 2>/dev/null | grep -q -F "$1"; then echo "ok plugin $1"; return 0; fi
-  claude plugin install "$1" && echo "changed plugin $1"
+  if claude plugin list 2>/dev/null </dev/null | grep -q -F "$1"; then echo "ok plugin $1"; return 0; fi
+  if claude plugin install "$1" </dev/null; then echo "changed plugin $1"; else echo "failed plugin $1"; return 1; fi
 }

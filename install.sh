@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Installs this repo's Claude Code setup into ~/.claude. Safe to re-run.
 set -u
+[ -n "${HOME:-}" ] || { echo "HOME is not set"; exit 1; }
 REPO="$(cd "$(dirname "$0")" && pwd)"
 . "$REPO/install/lib.sh"
 
 BACKUP="$HOME/.claude/backups/claude-setup-$(date +%Y%m%d-%H%M%S)"
 MODE=link; cs_is_windows && MODE=copy
-changed=0
-count() { while IFS= read -r line; do echo "$line"; case "$line" in changed*) changed=$((changed + 1)) ;; esac; done; }
+changed=0; failed=0
+count() { while IFS= read -r line; do echo "$line"; case "$line" in changed*) changed=$((changed + 1)) ;; failed*) failed=$((failed + 1)) ;; esac; done; }
 
 echo "== Dependencies"
 deps_out="$(cs_check_deps)"; claude_ok=$?
@@ -34,4 +35,5 @@ fi
 
 [ -d "$BACKUP" ] && echo "Backups: $BACKUP"
 echo "Summary: ${changed} changed"
-[ "$claude_ok" -eq 0 ]
+[ "$failed" -gt 0 ] && echo "Failures: ${failed}"
+[ "$claude_ok" -eq 0 ] && [ "$failed" -eq 0 ]

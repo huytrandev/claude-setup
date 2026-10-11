@@ -4,5 +4,8 @@ printf '%s\n' "$*" >> "${STUB_LOG:?}"
 case "$*" in
   "plugin marketplace list"*) printf '%s\n' "${STUB_MARKETPLACES:-}" ;;
   "plugin list"*) printf '%s\n' "${STUB_PLUGINS:-}" ;;
+  "plugin install"*)
+    [ "${STUB_EAT_STDIN:-}" = 1 ] && cat >/dev/null
+    [ -n "${STUB_FAIL_INSTALL:-}" ] && [ "$*" = "plugin install $STUB_FAIL_INSTALL" ] && exit 1 ;;
 esac
 exit 0

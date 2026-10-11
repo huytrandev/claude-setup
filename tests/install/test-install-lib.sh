@@ -73,6 +73,10 @@ assert_not_contains "$(cat "$STUB_LOG")" "plugin install" "installed plugin skip
 : > "$STUB_LOG"
 STUB_PLUGINS="" PATH="$T/bin:$PATH" cs_ensure_plugin podium@claude-setup >/dev/null
 assert_contains "$(cat "$STUB_LOG")" "plugin install podium@claude-setup" "missing plugin installed"
+: > "$STUB_LOG"
+out="$(STUB_PLUGINS="" STUB_FAIL_INSTALL=bad@m PATH="$T/bin:$PATH" cs_ensure_plugin bad@m)"; rc=$?
+assert_eq "failed plugin bad@m" "$out" "failed install reported"
+assert_eq 1 "$rc" "failed install returns 1"
 
 # settings.json: CLI-written extraKnownMarketplaces preserved and ignored (R3)
 if command -v jq >/dev/null 2>&1; then
