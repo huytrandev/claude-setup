@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Fake claude CLI for installer tests: logs every call, answers list commands from env.
+printf '%s\n' "$*" >> "${STUB_LOG:?}"
+case "$*" in
+  "plugin marketplace list"*) printf '%s\n' "${STUB_MARKETPLACES:-}" ;;
+  "plugin list"*) printf '%s\n' "${STUB_PLUGINS:-}" ;;
+esac
+exit 0
