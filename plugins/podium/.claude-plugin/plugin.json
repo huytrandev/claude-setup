@@ -1,0 +1,8 @@
+{
+  "name": "podium",
+  "description": "Model-pinned agent team (composer, critic, performer, scout) routed by a model-agnostic conductor",
+  "version": "0.1.0",
+  "author": { "name": "hyouwhy" },
+  "license": "MIT",
+  "keywords": ["agents", "orchestration", "superpowers"]
+}

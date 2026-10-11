@@ -1,0 +1,13 @@
+{
+  "name": "claude-setup",
+  "description": "Personal Claude Code setup: the podium multi-agent team plugin",
+  "owner": { "name": "hyouwhy" },
+  "plugins": [
+    {
+      "name": "podium",
+      "description": "Model-pinned agent team (composer, critic, performer, scout) routed by a model-agnostic conductor",
+      "version": "0.1.0",
+      "source": "./plugins/podium"
+    }
+  ]
+}
