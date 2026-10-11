@@ -51,8 +51,9 @@ git clone <this-repo> ~/Workspace/claude-setup
 pwsh ~/Workspace/claude-setup/install.ps1    # Windows
 ```
 
-The installer backs up anything it replaces to `~/.claude/backups/claude-setup-<timestamp>/` and is safe to re-run. It exits 1 and prints `Failures: N` if a marketplace add or plugin install fails.
-`settings.json` is copied, not linked: edit `dotfiles/settings.json` in the repo and re-run the installer to apply changes. Keys the Claude CLI writes itself (`extraKnownMarketplaces`) are preserved across re-runs.
+The installer backs up anything it replaces to `~/.claude/backups/claude-setup-<timestamp>/` and is safe to re-run. It exits 1 if Claude Code is missing or any plugin step fails (`Failures: N` lists failed steps).
+`settings.json` is copied, not linked: edit `dotfiles/settings.json` in the repo and re-run the installer to apply changes. Only `extraKnownMarketplaces` is preserved across re-runs (and only when jq is installed); any other change made to `~/.claude/settings.json` (e.g. `/model`, `/config`, plugin enable/disable) is replaced by the repo copy on the next run, with the old file backed up. Make such changes in `dotfiles/settings.json` instead.
+On macOS/Linux, `CLAUDE.md`, the guard hook, the statusline and the skill are symlinks into this checkout, so edits Claude makes to `~/.claude/CLAUDE.md` land in the working tree. Keep the clone in place and on a branch that contains `dotfiles/`: checking out a branch without it breaks the links and silently disables the guard hook.
 
 Synced: `CLAUDE.md`, `settings.json`, `statusline-command.sh`, `hooks/guard-destructive.sh`, `skills/capturing-personal-knowledge/`.
 Never synced: history, projects, sessions, credentials, caches.
