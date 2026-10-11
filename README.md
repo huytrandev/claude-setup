@@ -41,11 +41,28 @@ To turn podium off for one project, set `{ "enabledPlugins": { "podium@claude-se
 
 Task files live in `~/.agent-work/<project>/<date-task>/` unless `workspace` is set. When `workspace` is a relative path inside the repo, add it to `.gitignore`. On Windows, use forward slashes in `workspace` paths.
 
+## Set up a new machine
+
+Requirements: git, jq, Claude Code. Windows: Git for Windows (Git Bash) and PowerShell 7 (`pwsh`; Windows PowerShell 5.1 is not supported). Plugin commands ran without a login in a clean container, but sign in to Claude Code before real use.
+
+```bash
+git clone <this-repo> ~/Workspace/claude-setup
+~/Workspace/claude-setup/install.sh          # macOS / Linux
+pwsh ~/Workspace/claude-setup/install.ps1    # Windows
+```
+
+The installer backs up anything it replaces to `~/.claude/backups/claude-setup-<timestamp>/` and is safe to re-run. It exits 1 and prints `Failures: N` if a marketplace add or plugin install fails.
+`settings.json` is copied, not linked: edit `dotfiles/settings.json` in the repo and re-run the installer to apply changes. Keys the Claude CLI writes itself (`extraKnownMarketplaces`) are preserved across re-runs.
+
+Synced: `CLAUDE.md`, `settings.json`, `statusline-command.sh`, `hooks/guard-destructive.sh`, `skills/capturing-personal-knowledge/`.
+Never synced: history, projects, sessions, credentials, caches.
+
 ## Tests
 
 ```bash
 bash tests/run.sh                              # unit + static
 PODIUM_SMOKE=1 bash tests/smoke/run-smoke.sh   # headless, costs tokens
+bash tests/install/fresh-machine.sh            # opt-in: Docker + network, real CLI in a clean container
 ```
 
 ## Requirements
