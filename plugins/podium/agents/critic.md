@@ -35,7 +35,7 @@ Check:
 
 ## Mode final-review → `50-final-review.md`
 
-Review the diff of the work (`git diff` against the base named in your dispatch, or the uncommitted diff):
+Review the work: run `git status --porcelain` and `git diff <Base>` (the `Base:` commit in your dispatch; plain `git diff` if there is none), and read untracked files in full:
 1. Each plan task is implemented as specified; nothing out of scope.
 2. Tests exist for each `Test intent` and the task reports show them passing.
 3. Bugs, security issues, or project-rule violations in the changed code.

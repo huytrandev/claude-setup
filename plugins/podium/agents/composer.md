@@ -26,7 +26,7 @@ You never talk to the user directly. Every question goes into a questions file a
 
 **revise** — Read `31-review-vN.md`. Write `32-response-vN.md` with one line per finding: `<id> ACCEPT|REJECT — <reason>`. Write `30-plan-v(N+1).md` with accepted findings applied. Reject only with a concrete reason.
 
-**diagnose** — Run `superpowers:systematic-debugging` on the failing task using its `40-task-K-report.md` files. Write the root cause and a corrected task to `30-plan-v(N+1).md`. If you cannot find the root cause, stop with `STATUS: BLOCKED`.
+**diagnose** — Run `superpowers:systematic-debugging` on the failing task using all its `40-task-K-report-aM.md` attempt reports. Write the root cause, then the FULL plan to `30-plan-v(N+1).md` with task K replaced by the corrected task and every other task unchanged. If you cannot find the root cause, stop with `STATUS: BLOCKED`.
 
 ## Rules
 
