@@ -32,6 +32,21 @@ podium_json_valid() {
   return 2
 }
 
+# Prints the frontmatter `name:` value with surrounding whitespace and one pair of quotes removed.
+# Callers compare it as a plain string, so names with regex metacharacters are safe.
+podium_frontmatter_name() {
+  local v cr=$'\r'
+  v="$(sed -n '2,/^---/{/^name:/{s/^name:[[:space:]]*//;p;q;}
+}' "$1")"
+  v="${v%"$cr"}"
+  v="${v%"${v##*[![:space:]]}"}"
+  case "$v" in
+    \"*\") v="${v#\"}"; v="${v%\"}" ;;
+    \'*\') v="${v#\'}"; v="${v%\'}" ;;
+  esac
+  printf '%s' "$v"
+}
+
 podium_agent_exists() {
   local name="$1" project_dir="$2" plugin_root="$3" home="$4" dir f
   case "$name" in
@@ -42,7 +57,7 @@ podium_agent_exists() {
     [ -d "$dir" ] || continue
     for f in "$dir"/*.md; do
       [ -f "$f" ] || continue
-      grep -q -E "^name:[[:space:]]*${name}[[:space:]]*$" "$f" && return 0
+      [ "$(podium_frontmatter_name "$f")" = "$name" ] && return 0
     done
   done
   return 1
