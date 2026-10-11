@@ -43,7 +43,7 @@ Done when: <commands that must pass, e.g. "npm test -- payment passes, tsc --noE
 ## Extra self-review checks
 
 1. Every cross-task name in `Consumes` matches a `Produces` exactly (name, parameters, types).
-2. Every behavior in the spec has at least one `Test intent` entry.
+2. Every behavior in the spec (or in `00-request.md` when there is no spec) has at least one `Test intent` entry.
 3. No task leaves an open decision the builder would have to guess.
 4. No function or test bodies leaked in.
 5. `Done when` is a runnable command, not "works correctly".

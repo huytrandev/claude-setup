@@ -18,21 +18,30 @@ Personal rules (confirm before commit, push, destructive commands) still apply.
 
 ## Slots
 
-Dispatch the agent named for each slot in the `<podium>` block from session start, by `subagent_type`. If the block is missing: planner `podium:composer`, critic `podium:critic`, builder `podium:performer`, scout `podium:scout`, workspace root `~/.agent-work`.
+Dispatch the agent named for each slot in the `<podium>` block from session start, by `subagent_type`. If the block is missing: planner `podium:composer`, critic `podium:critic`, builder `podium:performer`, scout `podium:scout`, workspace root `$HOME/.agent-work` expanded to an absolute path.
 
 Project agents bound to a slot do not know podium's contract, so **every dispatch prompt includes the Contract section verbatim**.
 
 ## Step 1 — Triage
 
-Pick the highest level whose criteria match. Record the level and a one-line reason.
+Decide in this order and record the level with a one-line reason:
 
-| Level | Any one of these | Route |
-|---|---|---|
-| trivial | question or lookup; single-file change with an unambiguous fix; no design choice | you, or scout; no workspace |
-| standard | 2–5 files; no interface change; no open design choice | planner (standard-plan) → user approves → builder per task |
-| complex | interface or contract change; several modules; open design choice; new subsystem; more than 5 files | full flow |
+1. **complex** if any of: interface or contract change; several modules; open design choice; new subsystem; more than 5 files.
+2. **trivial** if all of: a question or lookup, or a single-file change with an unambiguous fix; no design choice.
+3. Otherwise **standard** (typically 2–5 files that need a short written plan).
 
-Escalation is one-way: when any agent returns `ESCALATE`, move up one level and continue from the planner using the files already written. Never downgrade.
+| Level | Route |
+|---|---|
+| trivial | you, or scout in `lookup` mode; no workspace |
+| standard | planner (`standard-plan`) → user approves → builder per task |
+| complex | full flow |
+
+Escalation is one-way. When any agent returns `ESCALATE`:
+- from trivial: create the workspace (Step 2) and continue as standard with planner mode `standard-plan`;
+- from standard: continue as complex with planner mode `spec`, passing every file already written as inputs;
+- from complex: there is no higher level — treat it as `BLOCKED`.
+
+Never downgrade.
 
 ## Step 2 — Workspace (standard and complex)
 
@@ -55,7 +64,7 @@ Level: <standard|complex> — <reason>
 Write `status.md`, and rewrite it after every dispatch returns:
 ```markdown
 # Status
-Phase: <triage|questions|spec-review|planning|plan-review|plan-approval|building|final-review|done>
+Phase: <questions|spec-approval|planning|plan-review|plan-approval|building|diagnosing|final-review|blocked|done>
 Active agent: <slot → agent, or none>
 Next step: <one line>
 Updated: <ISO 8601 timestamp>
@@ -66,9 +75,12 @@ File ownership — exactly one writer per file:
 | File | Writer |
 |---|---|
 | `00-request.md`, `11-answers-N.md`, `status.md` | conductor |
-| `10-questions-N.md`, `20-spec.md`, `30-plan-vN.md`, `32-response-vN.md` | planner |
+| `10-questions-N.md` | whichever agent returned `NEEDS_INPUT` for round N |
+| `20-spec.md`, `30-plan-vN.md`, `32-response-vN.md` | planner |
 | `31-review-vN.md`, `50-final-review.md` | critic |
 | `40-task-K-report.md` | builder |
+
+Round numbers N are global per task folder: before every dispatch or resume, the next questions file is `10-questions-<highest existing N + 1>.md`.
 
 ## Step 3 — Route
 
@@ -77,41 +89,58 @@ File ownership — exactly one writer per file:
 **Standard:**
 1. Dispatch planner, mode `standard-plan` → `30-plan-v1.md`.
 2. Give the user the plan path and a three-line summary. Wait for approval.
-3. For each task K in order: dispatch builder, mode `implement`, task K → `40-task-K-report.md`.
+3. For each task K in order: dispatch builder, mode `implement`, task K, input: the latest `30-plan-vN.md` → `40-task-K-report.md`.
 4. Report results with the verification evidence from the task reports.
 
 **Complex:**
 1. Dispatch planner, mode `spec` → question rounds (see Relaying) → `20-spec.md`.
-2. Ask the user to approve `20-spec.md`. Relay change requests to the planner (resume) until approved.
-3. Resume planner with "spec approved", mode `plan` → `30-plan-v1.md`.
+2. Ask the user to approve `20-spec.md`. Write any change request verbatim to the next `11-answers-N.md` and resume the planner (mode `spec`) until approved.
+3. Resume planner, mode `plan`, with "spec approved" → `30-plan-v1.md`.
 4. Dispatch a **fresh** critic, mode `plan-review`, on `30-plan-vN.md` → `31-review-vN.md`.
 5. Resume planner, mode `revise` → `32-response-vN.md` + `30-plan-v(N+1).md`. If the review had any blocker, repeat steps 4–5 once more (max 2 critic rounds).
-6. Give the user: final plan path, rejected findings with the planner's reasons, open disputes. Wait for approval.
+6. Give the user: final plan path, rejected findings with the planner's reasons, open disputes, and any blocker still open after round 2. Wait for approval.
 7. Builder per task as in Standard step 3.
-8. Dispatch a fresh critic, mode `final-review` → `50-final-review.md`. Report.
+8. Dispatch a fresh critic, mode `final-review` → `50-final-review.md`. If it lists blockers or majors, give them to the user with the review path and ask whether to dispatch the builder to fix them. Report.
 
 ## Dispatch prompt template
 
+Use these fields for every dispatch **and every resume** (`SendMessage`):
+
 ```
-Podium task folder: <absolute path>
+Podium task folder: <absolute path, or "none" for a trivial lookup>
 Role: <planner|critic|builder|scout>
-Mode: <spec|plan|standard-plan|revise|diagnose|plan-review|final-review|implement|lookup>
-Task: <for implement: "Task K" from the plan; otherwise omit>
+Mode: <mode>
+Task: <for implement: "Task K"; otherwise omit>
 Inputs: <file names to read>
 Output: <file name(s) to write>
+Questions file: <next 10-questions-N.md, or "none" for a trivial lookup>
 
 <Contract, verbatim>
 ```
 
+Output per mode:
+
+| Role / mode | Output |
+|---|---|
+| planner `spec` | `20-spec.md` (or the questions file) |
+| planner `plan`, `standard-plan` | `30-plan-v1.md` |
+| planner `revise` | `32-response-vN.md`, `30-plan-v(N+1).md` |
+| planner `diagnose` | `30-plan-v(N+1).md` |
+| critic `plan-review` | `31-review-vN.md` |
+| critic `final-review` | `50-final-review.md` |
+| builder `implement` | `40-task-K-report.md` |
+| scout `lookup` | none — reply inline |
+
 ## Contract
 
 ```
-- Read inputs from the task folder. Write only the output file(s) named above.
+- Read inputs from the task folder. Write only the output file(s) named above, plus the questions file if you return NEEDS_INPUT.
 - End your reply with exactly one line:
   STATUS: <DONE|NEEDS_INPUT|BLOCKED|ESCALATE> <relative/path/to/output.md>
-- NEEDS_INPUT: write numbered questions (with options where possible) to the next 10-questions-N.md and stop.
-- ESCALATE: the work is harder than its triage level; explain why in your output file.
-- BLOCKED: you cannot continue; explain why in your output file.
+  With no task folder or no output file, use "-" as the path.
+- NEEDS_INPUT: write numbered questions (with options where possible) to the questions file named above and stop.
+- ESCALATE: the work is harder than its triage level; explain why in your output file (or inline when there is none).
+- BLOCKED: you cannot continue; explain why in your output file (or inline when there is none).
 ```
 
 ## Handling STATUS
@@ -127,15 +156,15 @@ Output: <file name(s) to write>
 ## Relaying
 
 - Show the questions file to the user **verbatim** — no paraphrase, no reordering, no added options.
-- Write the user's reply **verbatim** to `11-answers-N.md`.
-- Resume the same planner with `SendMessage`: "Answers are in 11-answers-N.md."
-- If the planner cannot be resumed (new session), dispatch a fresh planner with every questions and answers file as inputs.
+- Write the user's reply **verbatim** to the matching `11-answers-N.md`.
+- Resume **the agent that asked** with `SendMessage`, using the dispatch fields (same Mode, Inputs plus `11-answers-N.md`, same Output).
+- If that agent cannot be resumed (new session), dispatch a fresh agent of the same slot with every questions and answers file as inputs.
 
 ## Caps
 
 - 5 question rounds; then tell the user the spec is not converging and ask how to proceed.
 - 2 critic rounds per plan.
-- 2 failed verifications for one builder task → dispatch planner, mode `diagnose`, with the task reports. If the planner returns BLOCKED, go to the user.
+- A builder task fails verification when its report's `Verification` shows a failing `Done when` command, or the builder returns `BLOCKED`. After 2 failures for one task: dispatch planner, mode `diagnose`, with that task's reports → `30-plan-v(N+1).md`; then dispatch a fresh builder for the corrected task. If the planner returns `BLOCKED`, go to the user.
 
 ## Models
 
