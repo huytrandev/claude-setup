@@ -41,9 +41,11 @@ function Copy-Item-Backed([string]$Rel) {
   $src = Join-Path $Repo "dotfiles/$Rel"
   $dest = Join-Path $Claude $Rel
   if (Test-SameContent $src $dest) { Write-Status ok $dest; return }
-  Move-ToBackup $dest $Rel
-  New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
-  Copy-Item -LiteralPath $src -Destination $dest -Recurse
+  try {
+    Move-ToBackup $dest $Rel
+    New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
+    Copy-Item -LiteralPath $src -Destination $dest -Recurse
+  } catch { Write-Status failed $dest; return }
   Write-Status changed $dest
 }
 
@@ -75,9 +77,11 @@ function Install-Settings {
     $new | Add-Member -NotePropertyName extraKnownMarketplaces -NotePropertyValue $old.extraKnownMarketplaces -Force
   }
   if ((Get-CanonicalJson $new) -ceq (Get-CanonicalJson $old)) { Write-Status ok $dest; return }
-  Move-ToBackup $dest 'settings.json'
-  $json = $new | ConvertTo-Json -Depth 20
-  [IO.File]::WriteAllText($dest, $json + "`n", [Text.UTF8Encoding]::new($false))
+  try {
+    Move-ToBackup $dest 'settings.json'
+    $json = $new | ConvertTo-Json -Depth 20
+    [IO.File]::WriteAllText($dest, $json + "`n", [Text.UTF8Encoding]::new($false))
+  } catch { Write-Status failed $dest; return }
   Write-Status changed $dest
 }
 

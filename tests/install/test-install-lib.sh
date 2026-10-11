@@ -44,6 +44,18 @@ mkdir -p "$T/src dir/skill"; echo s > "$T/src dir/skill/SKILL.md"
 cs_link_item "$T/src dir/skill" "$T/home/.claude/skills/skill" "$B" link >/dev/null
 assert_file "$T/home/.claude/skills/skill/SKILL.md" "dir link resolves"
 
+# failed link: read-only parent -> "failed <dest>", return 1
+mkdir -p "$T/ro"; chmod 555 "$T/ro"
+if [ ! -w "$T/ro" ]; then
+  out="$(cs_link_item "$T/src dir/a.md" "$T/ro/x.md" "$B" link 2>/dev/null)"; rc=$?
+  assert_eq "failed $T/ro/x.md" "$out" "unwritable parent reported as failed"
+  assert_eq 1 "$rc" "failed link returns 1"
+  out="$(cs_link_item "$T/src dir/a.md" "$T/ro/x.md" "$B" copy 2>/dev/null)"; rc=$?
+  assert_eq "failed $T/ro/x.md" "$out" "unwritable parent reported as failed (copy)"
+  assert_eq 1 "$rc" "failed copy returns 1"
+fi
+chmod 755 "$T/ro"
+
 # enabled plugins
 printf '{ "enabledPlugins": { "a@m": true, "b@m": false, "c@n": true } }\n' > "$T/s.json"
 assert_eq "a@m c@n" "$(cs_enabled_plugins "$T/s.json" | tr '\n' ' ' | sed 's/ $//')" "enabled plugins"
@@ -91,6 +103,14 @@ if command -v jq >/dev/null 2>&1; then
   assert_contains "$out" "changed" "repo change applied"
   assert_eq "light" "$(jq -r .theme "$T/home/.claude/settings.json")" "new value written"
   assert_eq "/x" "$(jq -r '.extraKnownMarketplaces.m.source.path' "$T/home/.claude/settings.json")" "marketplaces preserved"
+fi
+
+# settings.json without jq: plain copy with a warning (only when jq is not in /usr/bin:/bin)
+if ! PATH="/usr/bin:/bin" command -v jq >/dev/null 2>&1; then
+  printf '{ "theme": "dark" }\n' > "$T/src dir/s2.json"; echo '{}' > "$T/home/.claude/s2.json"
+  out="$(PATH="/usr/bin:/bin" cs_install_settings "$T/src dir/s2.json" "$T/home/.claude/s2.json" "$B")"
+  assert_contains "$out" "warn: jq not found — settings.json copied without preserving extraKnownMarketplaces" "no-jq fallback warns"
+  assert_contains "$out" "changed" "no-jq fallback still copies"
 fi
 
 finish

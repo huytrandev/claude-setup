@@ -8,8 +8,7 @@ cs_is_windows() {
 _cs_backup() { # $1=dest $2=backup_dir
   local rel
   case "$1" in */.claude/*) rel="${1##*/.claude/}" ;; *) rel="$(basename "$1")" ;; esac
-  mkdir -p "$(dirname "$2/$rel")"
-  mv "$1" "$2/$rel"
+  mkdir -p "$(dirname "$2/$rel")" && mv "$1" "$2/$rel"
 }
 
 cs_link_item() {
@@ -20,9 +19,9 @@ cs_link_item() {
   if [ "$mode" = copy ] && [ -f "$dest" ] && [ ! -L "$dest" ] && cmp -s "$src" "$dest"; then
     echo "ok $dest"; return 0
   fi
-  if [ -e "$dest" ] || [ -L "$dest" ]; then _cs_backup "$dest" "$backup"; fi
-  mkdir -p "$(dirname "$dest")"
-  if [ "$mode" = link ]; then ln -s "$src" "$dest"; else cp -R "$src" "$dest"; fi
+  if [ -e "$dest" ] || [ -L "$dest" ]; then _cs_backup "$dest" "$backup" || { echo "failed $dest"; return 1; }; fi
+  mkdir -p "$(dirname "$dest")" || { echo "failed $dest"; return 1; }
+  if [ "$mode" = link ]; then ln -s "$src" "$dest"; else cp -R "$src" "$dest"; fi || { echo "failed $dest"; return 1; }
   echo "changed $dest"
 }
 
@@ -30,7 +29,12 @@ cs_link_item() {
 # is preserved from the target and ignored when comparing; without jq, a plain copy.
 cs_install_settings() {
   local src="$1" dest="$2" backup="$3" merged
-  if ! command -v jq >/dev/null 2>&1 || [ ! -f "$dest" ] || [ -L "$dest" ] || ! jq empty "$dest" >/dev/null 2>&1; then
+  if ! command -v jq >/dev/null 2>&1; then
+    [ -f "$dest" ] && [ ! -L "$dest" ] && echo "warn: jq not found — settings.json copied without preserving extraKnownMarketplaces"
+    cs_link_item "$src" "$dest" "$backup" copy
+    return
+  fi
+  if [ ! -f "$dest" ] || [ -L "$dest" ] || ! jq empty "$dest" >/dev/null 2>&1; then
     cs_link_item "$src" "$dest" "$backup" copy
     return
   fi
@@ -38,8 +42,7 @@ cs_install_settings() {
     '. + (if $old[0].extraKnownMarketplaces then {extraKnownMarketplaces: $old[0].extraKnownMarketplaces} else {} end)' "$src")" \
     || { cs_link_item "$src" "$dest" "$backup" copy; return; }
   if [ "$merged" = "$(jq -S . "$dest")" ]; then echo "ok $dest"; return 0; fi
-  _cs_backup "$dest" "$backup"
-  printf '%s\n' "$merged" > "$dest"
+  _cs_backup "$dest" "$backup" && printf '%s\n' "$merged" > "$dest" || { echo "failed $dest"; return 1; }
   echo "changed $dest"
 }
 
