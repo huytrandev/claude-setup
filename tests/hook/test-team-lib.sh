@@ -17,7 +17,7 @@ assert_eq "agora-ta" "$(podium_json_string "$F/proj-valid/.claude/team.json" pla
 assert_eq "" "$(podium_json_string "$F/proj-valid/.claude/team.json" critic)" "absent key empty"
 assert_eq "agora-ta" "$(podium_json_string "$F/proj-minified/.claude/team.json" planner)" "minified planner"
 assert_eq "podium:critic" "$(podium_json_string "$F/proj-minified/.claude/team.json" critic)" "minified critic"
-assert_eq "claude-sonnet-5-5" "$(podium_json_string "$F/proj-minified/.claude/team.json" fallbackModel)" "minified fallback"
+assert_eq "sonnet" "$(podium_json_string "$F/proj-minified/.claude/team.json" fallbackModel)" "minified fallback"
 assert_eq "" "$(podium_json_string "$F/proj-valid/.claude/team.json" workspace)" "null workspace empty"
 
 # json validity
@@ -68,6 +68,6 @@ assert_contains "$ctx" "Team source: podium defaults" "no team.json source"
 assert_contains "$ctx" "Fallback model: none" "no fallback"
 
 ctx="$(podium_build_context "$F/proj-minified" "$P" "$H")"
-assert_contains "$ctx" "Fallback model: claude-sonnet-5-5" "fallback model shown"
+assert_contains "$ctx" "Fallback model: sonnet" "fallback model shown"
 
 finish

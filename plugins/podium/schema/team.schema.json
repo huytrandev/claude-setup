@@ -18,7 +18,7 @@
       }
     },
     "workspace": { "type": ["string", "null"], "description": "Workspace root. null = $HOME/.agent-work. Relative paths resolve from the repo root." },
-    "fallbackModel": { "type": ["string", "null"], "description": "Model ID used only when a pinned model is unavailable; the conductor reports the switch." }
+    "fallbackModel": { "enum": ["sonnet", "opus", "haiku", "fable", null], "description": "Agent-tool model alias used only when a pinned model is unavailable; the conductor reports the switch. Agent frontmatter keeps full model IDs." }
   },
   "required": ["version"]
 }

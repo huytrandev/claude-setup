@@ -31,13 +31,15 @@ Create `<repo>/.claude/team.json` (schema: `plugins/podium/schema/team.schema.js
 }
 ```
 
+`fallbackModel` is `null` (no fallback) or one of `sonnet`, `opus`, `haiku`, `fable` (the Agent tool's `model` aliases); the conductor uses it only when a pinned model is unavailable and says so. Agent frontmatter keeps full model IDs. Example: `"fallbackModel": "sonnet"`.
+
 Unbound slots use the defaults. The SessionStart hook warns about bindings to agents that do not exist.
 
 To turn podium off for one project, set `{ "enabledPlugins": { "podium@claude-setup": false } }` in that project's `.claude/settings.json` (verified: it overrides the user-scope install).
 
 ## Workspace
 
-Task files live in `~/.agent-work/<project>/<date-task>/` unless `workspace` is set.
+Task files live in `~/.agent-work/<project>/<date-task>/` unless `workspace` is set. When `workspace` is a relative path inside the repo, add it to `.gitignore`. On Windows, use forward slashes in `workspace` paths.
 
 ## Tests
 

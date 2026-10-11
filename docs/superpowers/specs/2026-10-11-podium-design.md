@@ -85,7 +85,7 @@ The critic is always a **new instance** with no planner history, so it does not 
 - `version`: schema version, currently `1`; validated against `plugins/podium/schema/team.schema.json`.
 - Every slot is optional; an unbound slot uses the Podium default.
 - `workspace`: `null` → `~/.agent-work`; a string → that path (relative paths resolve from repo root).
-- `fallbackModel`: `null` → no silent fallback; a model ID → used only when the pinned model is unavailable, and the conductor reports it.
+- `fallbackModel`: `null` → no silent fallback; one of the Agent tool `model` aliases (`sonnet`, `opus`, `haiku`, `fable`) → used only when the pinned model is unavailable, and the conductor reports it. Agent frontmatter keeps full model IDs.
 - A project that wants Podium fully off sets `"podium@<marketplace>": false` in `.claude/settings.json` (U1 verified), or denies `Agent(podium:*)`.
 
 ## 4. Triage
@@ -115,7 +115,7 @@ Escalation is one-way: any agent that finds the work harder than its level retur
 | `30-plan-vN.md` | planner | Skeleton plan version N |
 | `31-review-vN.md` | critic | Findings tagged blocker / major / minor |
 | `32-response-vN.md` | planner | Accept/reject per finding with reason |
-| `40-task-K-report.md` | builder | What changed, tests run and results, open issues |
+| `40-task-K-report-aM.md` | builder | One report per attempt M (from 1): what changed, tests run and results, open issues |
 | `50-final-review.md` | critic | Whole-diff review |
 | `status.md` | conductor | Current phase, active agent, next step |
 
@@ -138,7 +138,7 @@ The conductor routes on this line alone, so it does not need to understand the c
 3. Conductor asks the user to approve `20-spec.md`.
 4. Planner writes `30-plan-v1.md`. Conductor dispatches a fresh critic → `31-review-v1.md`. Conductor resumes planner → `32-response-v1.md` + `30-plan-v2.md`. If blockers remain, one more round (max 2).
 5. Conductor presents the final plan, rejected findings and open disputes for user approval.
-6. Builder implements each task → `40-task-K-report.md`. A task that fails verification twice goes back to planner for diagnosis (`superpowers:systematic-debugging`).
+6. Builder implements each task → `40-task-K-report-aM.md`. A task that fails verification is retried once with a fresh builder; after a second failure the planner diagnoses it (`superpowers:systematic-debugging`) and writes the full plan with the task replaced, and a fresh builder retries; a third failure goes to the user.
 7. Fresh critic reviews the whole diff → `50-final-review.md`. Conductor summarizes.
 
 Standard flow = steps 1, 4 (planner only, no critic), 6, verification; no spec.
