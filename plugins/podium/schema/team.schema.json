@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "podium/team.schema.json",
+  "title": "Podium team binding",
+  "description": "Binds podium role slots to project agents. Place at <repo>/.claude/team.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "slots": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "planner": { "type": "string", "description": "Agent that brainstorms, writes spec and skeleton plan. Default podium:composer." },
+        "critic": { "type": "string", "description": "Agent that reviews plans and final diffs in a fresh context. Default podium:critic." },
+        "builder": { "type": "string", "description": "Agent that implements one plan task at a time. Default podium:performer." },
+        "scout": { "type": "string", "description": "Agent for single-step lookups and light edits. Default podium:scout." }
+      }
+    },
+    "workspace": { "type": ["string", "null"], "description": "Workspace root. null = $HOME/.agent-work. Relative paths resolve from the repo root." },
+    "fallbackModel": { "type": ["string", "null"], "description": "Model ID used only when a pinned model is unavailable; the conductor reports the switch." }
+  },
+  "required": ["version"]
+}
