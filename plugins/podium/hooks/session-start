@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# SessionStart hook for podium: resolves the active team and injects the <podium> block.
+set -uo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# shellcheck source=lib/team.sh
+. "${SCRIPT_DIR}/lib/team.sh"
+
+project_dir="${CLAUDE_PROJECT_DIR:-$PWD}"
+context="$(podium_build_context "$project_dir" "$PLUGIN_ROOT" "$HOME")"
+# printf instead of a heredoc: bash 5.3 heredoc hang (obra/superpowers#571).
+printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "SessionStart",\n    "additionalContext": "%s"\n  }\n}\n' "$(podium_json_escape "$context")"
+exit 0
