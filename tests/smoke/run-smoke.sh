@@ -11,7 +11,10 @@ printf '{ "version": 1, "workspace": ".agent-work" }\n' > "$SB/.claude/team.json
 printf 'export function add(a: number, b: number) { return a + b; }\n' > "$SB/src/math.ts"
 (cd "$SB" && git init -q && git add -A && git -c user.email=t@t -c user.name=t commit -qm init)
 
-ask() { (cd "$SB" && claude -p --plugin-dir "$REPO/plugins/podium" --permission-mode acceptEdits --output-format json "$1"); }
+# Optional: PODIUM_SMOKE_MODEL=sonnet|haiku|... runs the conductor (main session) on that model.
+MODEL_ARGS=()
+[ -n "${PODIUM_SMOKE_MODEL:-}" ] && MODEL_ARGS=(--model "$PODIUM_SMOKE_MODEL")
+ask() { (cd "$SB" && claude -p --plugin-dir "$REPO/plugins/podium" --permission-mode acceptEdits --output-format json ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"} "$1"); }
 folders() { find "$SB/.agent-work" -mindepth 2 -maxdepth 2 -type d 2>/dev/null | wc -l | tr -d ' '; }
 
 # S1 trivial: no workspace folder

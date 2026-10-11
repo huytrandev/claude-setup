@@ -44,6 +44,7 @@ Checked on Claude Code 2.1.296 against code.claude.com docs (sub-agents, model-c
 - U3: Whether `enabledPlugins` in `~/.claude/settings.json` auto-installs plugins on a fresh machine (install script uses the CLI regardless).
 - U4: Bash hooks on Windows (assumed to require Git Bash).
 - U5 (resolved): `claude plugin eval` runs `evals/**/case.yaml` (or prompt.md + graders/*.md) cases against a plugin with a no-plugin ablation arm and scored graders. Decision: keep S1-S3 as the bash smoke script for phase 1 because they assert on workspace files in a sandbox repo, which prompt graders do not cover as directly; revisit an eval suite for triage-quality regressions later.
+- Weaker conductor (2026-10-11, `PODIUM_SMOKE_MODEL=<model> PODIUM_SMOKE=1 bash tests/smoke/run-smoke.sh`): conductor on default model 10/10, on `sonnet` 10/10 (S1 pass, S2 pass, S3 pass), on `haiku` 10/10 (S1 pass, S2 pass, S3 pass). One run per model; LLM behavior is nondeterministic, so this is a sample, not a guarantee.
 
 ## 3. Architecture
 
